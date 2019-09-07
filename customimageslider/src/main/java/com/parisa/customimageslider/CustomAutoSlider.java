@@ -4,8 +4,11 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Handler;
-import android.support.annotation.NonNull;
-import android.support.v4.view.ViewPager;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.FragmentActivity;
+import androidx.viewpager.widget.ViewPager;
+
 import android.text.Html;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -16,6 +19,10 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.parisa.customimageslider.adapters.SliderAdapter;
+import com.parisa.customimageslider.interfaces.CustomSliderListener;
+import com.parisa.customimageslider.model.CustomDirection;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,9 +30,8 @@ import static android.content.ContentValues.TAG;
 
 public class CustomAutoSlider extends RelativeLayout {
 
-    public static int SCROLL_DIRECTION = 1;
-    public final static int SCROLL_FROM_RIGHT = 1;
-    public final static int SCROLL_FROM_LEFT = -1;
+
+    public static int SCROLL_DIRECTION = 0;
 
     public static final int ALIGN_PARENT_RIGHT = RelativeLayout.ALIGN_PARENT_RIGHT;
     public static final int ALIGN_PARENT_LEFT = RelativeLayout.ALIGN_PARENT_LEFT;
@@ -36,13 +42,12 @@ public class CustomAutoSlider extends RelativeLayout {
     View root;
     private static ViewPager pager;
     private List<SliderItem> sliderItems = new ArrayList<>();
-    private static SliderAdapter mSectionsPagerAdapter;
+    public static SliderAdapter mSectionsPagerAdapter;
     private Context context;
     private static int counter = 1000;
     static int min = 1;
     static int max;
     private LinearLayout dotsLayout;
-    private TextView[] dots;
     private static int active = -1;
     private CustomSliderListener customSliderListener;
     private RelativeLayout dots_container;
@@ -80,7 +85,7 @@ public class CustomAutoSlider extends RelativeLayout {
 
     private void initDots(int initialPos) {
         dotsLayout.removeAllViews();
-        dots = new TextView[sliderItems.size()];
+        TextView[] dots = new TextView[sliderItems.size()];
         for (int i = 0; i < dots.length; i++) {
             dots[i] = new TextView(context);
             dots[i].setText(Html.fromHtml("&#8226;"));
@@ -97,7 +102,7 @@ public class CustomAutoSlider extends RelativeLayout {
     }
 
     //protected method
-    protected static void initHandler(final int gravity, int pos) {
+    public static void initHandler(final int gravity, int pos) {
         max = pos;
         min = pos;
         if (handler == null)
@@ -106,7 +111,7 @@ public class CustomAutoSlider extends RelativeLayout {
             public void run() {
                 Log.d(TAG, "run: handler starts");
 
-                if (gravity == SCROLL_FROM_RIGHT)
+                if (gravity == CustomDirection.SCROLL_FROM_RIGHT)
                     if (max != 0) {
                         pager.setCurrentItem(max);
                         active = max;
@@ -116,7 +121,7 @@ public class CustomAutoSlider extends RelativeLayout {
                         active = 0;
                         max = mSectionsPagerAdapter.sliderItems.size() - 1;
                     }
-                else if (gravity == SCROLL_FROM_LEFT) {
+                else if (gravity == CustomDirection.SCROLL_FROM_LEFT) {
                     if (min < mSectionsPagerAdapter.sliderItems.size()) {
                         pager.setCurrentItem(min);
                         min++;
@@ -133,23 +138,23 @@ public class CustomAutoSlider extends RelativeLayout {
 
     protected void startAutoCircle(int pos) {
 
-        if (SCROLL_DIRECTION == SCROLL_FROM_LEFT) {
-            initHandler(SCROLL_FROM_LEFT, pos);
-        } else if (SCROLL_DIRECTION == SCROLL_FROM_RIGHT) {
+        if (SCROLL_DIRECTION == CustomDirection.SCROLL_FROM_LEFT) {
+            initHandler(CustomDirection.SCROLL_FROM_LEFT, pos);
+        } else if (SCROLL_DIRECTION == CustomDirection.SCROLL_FROM_RIGHT) {
             max = sliderItems.size() - 1;
-            initHandler(SCROLL_FROM_RIGHT, pos);
+            initHandler(CustomDirection.SCROLL_FROM_RIGHT, pos);
         }
         initDots(pos);
 
     }
 
-    protected static void stopHandler() {
+    public static void stopHandler() {
         if (handler != null)
             handler.removeCallbacksAndMessages(null);
         handler = null;
     }
 
-    protected static int getCurrentPagerPos() {
+    public static int getCurrentPagerPos() {
         return pager.getCurrentItem();
     }
 
@@ -163,10 +168,10 @@ public class CustomAutoSlider extends RelativeLayout {
         this.sliderItems.clear();
         this.sliderItems.addAll(sliderItems);
         handler = new Handler();
-        mSectionsPagerAdapter = new SliderAdapter(((android.support.v4.app.FragmentActivity) context).getSupportFragmentManager(), sliderItems, customSliderListener);
+        mSectionsPagerAdapter = new SliderAdapter(((FragmentActivity) context).getSupportFragmentManager(), sliderItems, customSliderListener);
         if (sliderItems.size() > 0) {
             pager.setAdapter(mSectionsPagerAdapter);
-            if (SCROLL_DIRECTION == SCROLL_FROM_RIGHT) {
+            if (SCROLL_DIRECTION == CustomDirection.SCROLL_FROM_RIGHT) {
                 active = sliderItems.size() - 1;
                 pager.setCurrentItem(active, true);
             } else {
@@ -207,11 +212,11 @@ public class CustomAutoSlider extends RelativeLayout {
 
                 }
                 if (userScrollChange && state == ViewPager.SCROLL_STATE_IDLE) {
-                    if (isEnd) {
+                    if (isEnd && pager.getCurrentItem() == sliderItems.size() - 1) {
                         pager.setCurrentItem(0, true);
                         isEnd = false;
                     }
-                    if (isStart) {
+                    if (isStart && pager.getCurrentItem() == 0) {
                         pager.setCurrentItem(sliderItems.size() - 1, true);
                         isStart = false;
                     }
@@ -251,14 +256,7 @@ public class CustomAutoSlider extends RelativeLayout {
     }
 
     public void setGravity(int gravity) {
-        switch (gravity) {
-            case SCROLL_FROM_LEFT:
-                SCROLL_DIRECTION = SCROLL_FROM_LEFT;
-                break;
-            case SCROLL_FROM_RIGHT:
-                SCROLL_DIRECTION = SCROLL_FROM_RIGHT;
-                break;
-        }
+        SCROLL_DIRECTION = gravity;
     }
 
     @Override
@@ -272,10 +270,13 @@ public class CustomAutoSlider extends RelativeLayout {
                 if (mStartDragX < x && getCurrentPagerPos() == 0) {
                     Log.d(TAG, "onInterceptTouchEvent: outAtStart");
                     isStart = true;
-                } else if (mStartDragX > x && getCurrentPagerPos() == sliderItems.size() - 1) {
+                } else if (mStartDragX > x && getCurrentPagerPos() == 0)
+                    isStart = false;
+                else if (mStartDragX > x && getCurrentPagerPos() == sliderItems.size() - 1) {
                     Log.d(TAG, "onInterceptTouchEvent: outAtEnd");
                     isEnd = true;
-                }
+                } else if (mStartDragX < x && getCurrentPagerPos() == sliderItems.size() - 1)
+                    isEnd = false;
         }
         return super.onInterceptTouchEvent(ev);
     }

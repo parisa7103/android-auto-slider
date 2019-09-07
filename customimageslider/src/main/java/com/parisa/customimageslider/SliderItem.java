@@ -4,12 +4,28 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 public class SliderItem implements Parcelable {
-    private  String title;
-    private  String url = null;
+    private String title;
+    private String url = null;
+
+    public int getPlaceHolder() {
+        return placeHolder;
+    }
+
+    public void setPlaceHolder(int placeHolder) {
+        this.placeHolder = placeHolder;
+    }
+
+    private int placeHolder = 0;
 
     public SliderItem(String title, String url) {
         this.title = title;
         this.url = url;
+    }
+
+    public SliderItem(String title, String url, int placeHolder) {
+        this.title = title;
+        this.url = url;
+        this.placeHolder = placeHolder;
     }
 
     public SliderItem(String title, int resID) {
@@ -17,8 +33,13 @@ public class SliderItem implements Parcelable {
         this.resID = resID;
     }
 
-    protected SliderItem(Parcel in) {
+    public SliderItem(String title, int resID , int placeHolder) {
+        this.title = title;
+        this.resID = resID;
+        this.placeHolder = placeHolder;
+    }
 
+    protected SliderItem(Parcel in) {
 
         title = in.readString();
         url = in.readString();
@@ -61,7 +82,7 @@ public class SliderItem implements Parcelable {
         this.resID = resID;
     }
 
-    private  int resID = 0;
+    private int resID = 0;
 
     @Override
     public int describeContents() {
